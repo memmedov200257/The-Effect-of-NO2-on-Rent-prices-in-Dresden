@@ -225,3 +225,127 @@ apartment_rent$Etage <- as.integer(apartment_rent$Etage)
 
 ```
 
+```{r loading the raster data for N02 emission in 2015}
+
+no <- raster(here("Data" , "2015_final_1km.tif"))
+
+crs(no) <- "+proj=longlat +datum=WGS84 +no_defs"
+
+
+
+```
+
+
+
+
+
+
+
+
+```{r}
+#openning the germany map
+ger_4 <- st_read(here("Data", "gadm41_DEU_shp", "gadm41_DEU_4.shp"))
+
+#filtering for Dresden
+dresden <- ger_4  %>% 
+  filter(NAME_4=="Dresden")
+
+
+# to exctract the outliers that located outside the city, when i arranged the apartment_rent data WKT column I saw the coordinate that differ from others to much thats why I exract using filter function
+apartment_rent <- apartment_rent %>% 
+  filter(!Ort=="DresdenNeustadt")
+
+
+apar_sf <- st_as_sf(apartment_rent, wkt = "WKT")
+st_crs(apar_sf) <- 32633
+
+apar_sf <- st_transform(apar_sf, crs = 4326)
+
+
+
+#cropping and masking
+dresden_no <- crop(no, dresden )
+dresden_no_mask <- mask(dresden_no, dresden )
+
+apar_terra <- vect(apar_sf)
+dresden_terra <- vect(dresden)
+area_apar <- crop(apar_terra, dresden_terra)
+area_apar_sf <- st_as_sf(area_apar)
+dresden_sf <- st_as_sf(dresden)
+
+
+#use disaggregate for perfect vizualitation
+dresden_no_mask <- disaggregate(dresden_no_mask, fact=20, method='bilinear')
+
+
+#convert it to df
+dresden_no_mask_df <- as.data.frame(dresden_no_mask, xy = TRUE, na.rm = TRUE)
+
+
+
+
+
+
+#apartments in Dresden
+apar_area_plot <- ggplot() +
+  geom_sf(data = dresden) +
+  geom_sf(data = area_apar_sf, aes(fill = "Apartment Rent prices"), colour = "blue") +
+  labs(title = "Apartments in Dresden",fill = "") +
+  theme_minimal()
+
+
+# Apartmennts and  NO2 emissions in Dresden
+apar_no_area_plot <- ggplot() +
+  geom_sf(data = dresden_sf, fill = "grey80") +
+  geom_raster(data = dresden_no_mask_df, aes(x = x, y = y, fill = X2015_final_1km)) +
+  scale_fill_gradient(low = "yellow", high = "red", name = "Emission Levels") +
+  geom_sf(data = area_apar_sf, aes(color = "Apartments"), size = 2, show.legend = "point") +
+  scale_color_manual(values = c("Apartments" = "black"), name = "Features") +
+  labs(title = "Apartments and Emissions in Dresden", 
+       fill = "Emission Levels", 
+       color = "Features") +
+  theme_minimal()
+
+
+
+
+plot(apar_area_plot)
+plot(apar_no_area_plot)
+plot(dresden_no_mask)
+
+
+```
+plot(apar_area_plot)
+plot(apar_no_area_plot)
+plot(dresden_no_mask)
+
+
+
+
+
+
+
+
+```{r}
+
+
+# convert the dresden_no_mask_df to  Spatial DataFrame-
+dresden_no_mask_sf <- st_as_sf(dresden_no_mask_df, coords = c("x", "y"), crs = 4326)
+
+
+#same crs
+crs(dresden_no_mask_sf)
+crs(apar_sf)
+
+
+# I used the nearest neighbourhud for finding each apartment points nearest emissions
+
+apartment_rent_with_emissions <- st_join(apar_sf, dresden_no_mask_sf, join = st_nearest_feature)
+
+
+# to look merge data
+head(apartment_rent_with_emissions)
+
+
+
+```
