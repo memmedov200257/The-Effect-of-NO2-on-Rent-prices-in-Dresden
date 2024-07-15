@@ -349,3 +349,76 @@ head(apartment_rent_with_emissions)
 
 
 ```
+
+
+
+
+
+
+```{r creating the adress}
+
+hbf <- tibble::tribble(
+~name,~addr,
+"Dresden Hbf",  "Wiener Platz 4, 01069 Dresden")
+hbf
+
+hbf_geocode <- hbf %>%
+  geocode(addr, method = 'osm', lat = latitude , long = longitude)
+
+
+hbf_sf <- st_as_sf(hbf_geocode, coords = c("longitude", "latitude"), crs = 4326)
+
+
+
+
+
+
+
+
+
+
+#looking the apartments , emissions and HBF
+apar_no_hbf_area_plot <- ggplot() +
+  geom_sf(data = dresden_sf, fill = "grey80") +
+  geom_raster(data = dresden_no_mask_df, aes(x = x, y = y, fill = X2015_final_1km)) +
+  scale_fill_gradient(low = "yellow", high = "red") +
+  geom_sf(data = area_apar_sf, aes(color = "Apartments"), size = 2) +
+  geom_sf(data = hbf_sf, aes(color = "Main Station"), size = 5, show.legend = "point") +
+  scale_color_manual(values = c("Main Station" = "blue", "Apartments" = "black")) +
+  labs(fill = "Emission Levels", color = "Features") +
+  guides(color = guide_legend(override.aes = list(size = c(2, 5)))) +
+  theme_minimal()
+
+plot(apar_no_hbf_area_plot)
+
+```
+
+plot(apar_no_hbf_area_plot)
+
+
+
+
+
+
+
+```{r calculating the distances to hbf}
+
+hbf_distances <- st_distance(hbf_sf, apar_sf)
+
+print(hbf_distances)
+hbf_distances_df <- as.data.frame(hbf_distances)
+hbf_distances_df <- as.data.frame(t(hbf_distances_df))
+
+hbf_distances_df$ScoutID <- apartment_rent_with_emissions$ScoutID
+
+apartment_rent_with_emissions_hbf <- left_join(hbf_distances_df, apartment_rent_with_emissions, by="ScoutID")
+
+# in this data set I saw that some variables was same except ScoutID and Datum, for keeping only one I did this code, after this still have same adresses but not same prices or rooms maybe modifyed that is why i kept rest of them in my data
+apartment_rent_with_emissions_hbf <- apartment_rent_with_emissions_hbf %>%
+  distinct(across(-c(ScoutID, Datum)), .keep_all = TRUE)
+
+#lets convert the m to km 
+apartment_rent_with_emissions_hbf$V1 <- apartment_rent_with_emissions_hbf$V1 / 1000
+
+
+```
