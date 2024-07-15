@@ -422,3 +422,91 @@ apartment_rent_with_emissions_hbf$V1 <- apartment_rent_with_emissions_hbf$V1 / 1
 
 
 ```
+
+
+
+```{r calculating the regression}
+#1st model just calculate adding all important variables using OLS
+model_1 <-  lm(log(Kaltmiete)~log(V1)  + log(Wohnflaech)+ EBK+   Zimmer +Etage+Garten+Barrierefr + Keller + BalkonTerr + Aufzug  +log(X2015_final_1km) ,data=apartment_rent_with_emissions_hbf)
+
+
+stargazer(model_1, type="text")
+
+
+
+#For 2nd model I seperated NO2 variables according to the mean to 2 different level, in this regression I will calculate as factor levels
+
+mean_NO2 <- mean(apartment_rent_with_emissions_hbf$X2015_final_1km, na.rm = TRUE)
+mean_NO2 # 10.64627
+
+# NO2_category created
+apartment_rent_with_emissions_hbf$NO2_category <- ifelse(apartment_rent_with_emissions_hbf$X2015_final_1km <= mean_NO2, "NO2_Low", "NO2_High")
+
+# NO2_category factoring the levels
+apartment_rent_with_emissions_hbf$NO2_category <- factor(apartment_rent_with_emissions_hbf$NO2_category, levels = c("NO2_Low", "NO2_High"))
+
+
+#model 2
+model_2 <-  lm(log(Kaltmiete)~log(V1)  + log(Wohnflaech)+ EBK+  Zimmer +Etage+Garten+Barrierefr + Keller + BalkonTerr + Aufzug  +NO2_category   ,data=apartment_rent_with_emissions_hbf)
+
+
+stargazer(model_1, model_2, type="text")
+
+
+
+
+```
+```{r creating histogram for plotting NO2 level distrubition}
+
+
+breaks <- c(5, 10.64627, 17)
+labels <- c("Low level", "High level")
+
+# Create a new column in the data frame for the bins
+apartment_rent_with_emissions_hbf$NO2_bins <- cut(apartment_rent_with_emissions_hbf$X2015_final_1km, breaks = breaks, labels = labels, include.lowest = TRUE, right = FALSE)
+
+# Calculatte the frequencies and percentages
+bin_counts <- table(apartment_rent_with_emissions_hbf$NO2_bins)
+bin_percentages <- prop.table(bin_counts) * 100
+
+# Convert to data frame for plotting
+bin_data <- as.data.frame(bin_counts)
+colnames(bin_data) <- c("NO2_bins", "Count")
+bin_data$Percentage <- bin_percentages[bin_data$NO2_bins]
+
+
+
+
+
+```
+ggplot(bin_data, aes(x = NO2_bins, y = Count)) +
+    geom_bar(stat = "identity", color = "black", fill = "blue") +
+    geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5) +
+    labs(title = "Distribution of NO2 Levels", x = "NO2 Levels", y = "Frequency") +
+    theme_minimal()
+    
+    
+    
+```{r creating histogram for rent distrubition}
+# Kira aralıkları ve etiketler
+breaks <- c(100, 300, 500, 1000, 1500, 2600)
+labels <- c("100-300", "300-500", "500-1000", "1000-1500", "1500-2600")
+
+# Kaltmiete sütununu belirtilen aralıklara göre bölen yeni bir sütun oluşturun
+apartment_rent_with_emissions_hbf$Kaltmiete_bins <- cut(apartment_rent_with_emissions_hbf$Kaltmiete, breaks = breaks, labels = labels, include.lowest = TRUE, right = FALSE)
+
+# Frekansları ve yüzdeleri hesaplayın
+bin_counts <- table(apartment_rent_with_emissions_hbf$Kaltmiete_bins)
+bin_percentages <- prop.table(bin_counts) * 100
+
+# Sonuçları grafik için bir veri çerçevesine dönüştürün
+bin_data <- as.data.frame(bin_counts)
+colnames(bin_data) <- c("Kaltmiete_bins", "Count")
+bin_data$Percentage <- bin_percentages[bin_data$Kaltmiete_bins]
+```
+    
+ggplot(bin_data, aes(x = Kaltmiete_bins, y = Count)) +
+    geom_bar(stat = "identity", color = "black", fill = "blue") +
+    geom_text(aes(label = paste0(round(Percentage, 1), "%")), vjust = -0.5) +
+    labs(title = "Distribution of Rent Prices", x = "Rent Prices (Kaltmiete)", y = "Numbers") +
+    theme_minimal()
