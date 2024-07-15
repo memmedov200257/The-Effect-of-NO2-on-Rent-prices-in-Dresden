@@ -45,23 +45,23 @@ Etage= Position of floor
 
 X2015_final_1km= NO2 emission
 
-![](Output/Descriptive%20statistic.png)
+[![](Output/Descriptive statistic.png){width="100%"}](Output/Descriptive statistic.png)
 
 ## Here is the distrubition of apartment rent price
 
 you can see almost 55% of apartment prices located in 300-500 euro.
 
-![](Output/Distribituon%20of%20Apartment%20Rent%20Prices%20in%20Dresden.jpeg)
+[![](Output/Distribituon of Apartment Rent Prices in Dresden.jpeg)](Output/Distribituon of Apartment Rent Prices in Dresden.jpeg)
 
 ## The geospatial distrubition of apartments in Dresden
 
-![](Output/Apartments%20in%20Dresden.jpeg)
+[![](Output/Apartments in Dresden.jpeg)](Output/Apartments in Dresden.jpeg)
 
 # Emission raster data
 
 You can see the level of emissions in Dresden is very low, according to the literatures the low level lies from 0 to 40.
 
-![](Output/emissions%20in%20dresden.jpeg){width="1000"}
+[![](Output/emissions in dresden.jpeg)](Output/emissions in dresden.jpeg)
 
 # Emission, city center and apartments of Dresden
 
