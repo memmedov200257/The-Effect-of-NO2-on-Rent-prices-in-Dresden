@@ -488,18 +488,18 @@ ggplot(bin_data, aes(x = NO2_bins, y = Count)) +
     
     
 ```{r creating histogram for rent distrubition}
-# Kira aralıkları ve etiketler
+# rent breaks
 breaks <- c(100, 300, 500, 1000, 1500, 2600)
 labels <- c("100-300", "300-500", "500-1000", "1000-1500", "1500-2600")
 
-# Kaltmiete sütununu belirtilen aralıklara göre bölen yeni bir sütun oluşturun
+# creating the bins
 apartment_rent_with_emissions_hbf$Kaltmiete_bins <- cut(apartment_rent_with_emissions_hbf$Kaltmiete, breaks = breaks, labels = labels, include.lowest = TRUE, right = FALSE)
 
-# Frekansları ve yüzdeleri hesaplayın
+# calculate the percentage
 bin_counts <- table(apartment_rent_with_emissions_hbf$Kaltmiete_bins)
 bin_percentages <- prop.table(bin_counts) * 100
 
-# Sonuçları grafik için bir veri çerçevesine dönüştürün
+
 bin_data <- as.data.frame(bin_counts)
 colnames(bin_data) <- c("Kaltmiete_bins", "Count")
 bin_data$Percentage <- bin_percentages[bin_data$Kaltmiete_bins]
