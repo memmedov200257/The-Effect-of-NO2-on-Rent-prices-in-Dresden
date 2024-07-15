@@ -1,0 +1,7 @@
+---
+title: "coding"
+author: "Elvin Mammadov"
+date: "2024-07-01"
+output: html_document
+---
+
