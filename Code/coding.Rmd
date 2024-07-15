@@ -4,4 +4,224 @@ author: "Elvin Mammadov"
 date: "2024-07-01"
 output: html_document
 ---
+```{r loading the packages}
+# Load packages that we will use
+library(lmtest)
+library(ggplot2)  
+library(ggcorrplot)
+library(stargazer)
+library(foreign)
+library(xtable)
+library(plm)
+library(Amelia)
+library(dplyr)
+library(raster)
+library(rpart)
+library(dplyr)
+library(lubridate)
+
+
+library(stringr)
+
+
+```
+
+
+
+```{r loading the packages 2}
+library(pacman)
+
+pacman::p_load(
+  ggplot2,
+  dplyr,
+  sf,
+  raster,
+  rnaturalearth,
+ rnaturalearthdata,
+ exactextractr,
+ ncdf4,
+ grid,
+ ggspatial,
+ gridExtra,
+ ggrepel,
+ tidygeocoder,
+ rgdal,
+ osrm ,
+  here,
+  terra,
+  tidyr
+)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r initial data cleaning, include=FALSE}
+#Loading our housing data for Dresden
+
+apartment_rent <- read.csv(here("Data", "apartment_rent_dresden.csv"), header = TRUE, sep = ";")
+
+
+print(apartment_rent)
+
+#filtering only Dresden (in Ort column have word mistakes, that is why I used this function filtering starts with "dre")
+
+apartment_rent <- apartment_rent %>% 
+ filter(grepl("^dre", Ort, ignore.case = TRUE))
+
+#For year 2015 apartment data
+apartment_rent$Datum <- as.Date(apartment_rent$Datum, format = "%d.%m.%Y") #convert this column as date
+
+apartment_rent <- subset(apartment_rent, format(Datum, "%Y") == "2015")
+
+
+#checing NAs and empty values
+sum(apartment_rent$Stell_Miet == "") 
+sum(apartment_rent$Nutzflaech == "") 
+sum(apartment_rent$Stellplatz == "") 
+sum(apartment_rent$Anzahl_Ste == "") 
+sum(apartment_rent$Befeuerung == "") 
+sum(apartment_rent$Bemerkung == "") 
+sum(apartment_rent$Wohnungsty == "") 
+sum(apartment_rent$Etagenanza == "") 
+
+#Unselecting the unnecessary columns and columns that have more NA values
+ apartment_rent <- apartment_rent[, !names(apartment_rent) %in% c( "OBJECTID_1", "Join_Count", "TARGET_FID", "OBJECTID_2", "Join_Cou_1", "TARGET_F_1", "Join_Cou_2", "TARGET_F_2" , "Stell_Miet",  "Nutzflaech",   "Stellplatz" , "Anzahl_Ste" , "Baujahr", "Letzte_Mod",  "Befeuerung",  "OBJECTID", "STVdayPege", "Adresse_Ge", "Email_Kont", "Bemerkung", "SCHIsopha", "SCHIsophp", "SCHfarbwer", "l_datum", "esri_oid", "SCHanight", "SCHpnight", "SCHfnight", "l_datum_1", "esri_oid_1", "Stadtteil", "Wohnungsty", "PRICE", "Etagenanza", "Schlafzimm", "Badezimmer")]
+
+
+#In our data some values inside the column mixed as character, numeric or empty, so firstly I try find how many empty values after I change this to NA and some numbers with comma to dot.(R does not understand comma as number) In the end I check the amount of empty columns with amount of NA.
+
+# Convert for Kaltmiete
+sum(apartment_rent$Kaltmiete == "") # 0
+
+apartment_rent$Kaltmiete <- gsub(",", ".", apartment_rent$Kaltmiete)
+apartment_rent$Kaltmiete <- as.numeric(apartment_rent$Kaltmiete)
+sum(is.na(apartment_rent$Kaltmiete)) # 0
+
+# Convert for Wohnflaech
+sum(apartment_rent$Wohnflaech == "") # 0
+
+apartment_rent$Wohnflaech <- gsub(",", ".", apartment_rent$Wohnflaech)
+apartment_rent$Wohnflaech <- as.numeric(apartment_rent$Wohnflaech)
+sum(is.na(apartment_rent$Wohnflaech)) # 0 
+
+
+# Convert for Zimmer
+sum(apartment_rent$Zimmer == "") # 0
+
+apartment_rent$Zimmer <- gsub(",", ".", apartment_rent$Zimmer)
+apartment_rent$Zimmer <- as.numeric(apartment_rent$Zimmer)
+sum(is.na(apartment_rent$Zimmer)) # 0
+
+# Convert for Etage
+sum(apartment_rent$Etage == "") # 0
+
+apartment_rent$Etage <- gsub(",", ".", apartment_rent$Etage)
+apartment_rent$Etage <- as.numeric(apartment_rent$Etage)
+sum(is.na(apartment_rent$Etage)) # 1124
+
+missmap(apartment_rent)
+
+#Kaltmiete (Rent)
+sum(apartment_rent$Kaltmiete == "") # 1347
+apartment_rent$Kaltmiete <- gsub(",", ".", apartment_rent$Kaltmiete)
+apartment_rent$Kaltmiete <- as.numeric(apartment_rent$Kaltmiete)
+sum(is.na(apartment_rent$Kaltmiete)) # 1347
+
+
+#Convert for Wohnflaech
+sum(apartment_rent$Wohnflaech == "") # 0
+apartment_rent$Wohnflaech <- gsub(",", ".", apartment_rent$Wohnflaech)
+apartment_rent$Wohnflaech <- as.numeric(apartment_rent$Wohnflaech)
+sum(is.na(apartment_rent$Wohnflaech)) # 0 
+
+
+# Convert for Zimmer
+sum(apartment_rent$Zimmer == "") # 0
+apartment_rent$Zimmer <- gsub(",", ".", apartment_rent$Zimmer)
+apartment_rent$Zimmer <- as.numeric(apartment_rent$Zimmer)
+sum(is.na(apartment_rent$Zimmer)) # 0
+
+
+# Convert for Etage
+sum(apartment_rent$Etage == "") # 1124
+apartment_rent$Etage <- gsub(",", ".", apartment_rent$Etage)
+apartment_rent$Etage <- as.numeric(apartment_rent$Etage)
+sum(is.na(apartment_rent$Etage)) # 1124
+
+
+
+
+
+
+```
+
+
+
+
+
+```{r removing outliers and fixing NAs}
+#removing the datas that the rent prices is NA
+apartment_rent <- apartment_rent %>% 
+  filter(!is.na(Kaltmiete))
+
+#factoring the some categorical values
+
+apartment_rent$Keller <- factor(apartment_rent$Keller, levels = c("nein", "ja"))
+apartment_rent$BalkonTerr <- factor(apartment_rent$BalkonTerr, levels = c("nein", "ja"))
+apartment_rent$Aufzug <- factor(apartment_rent$Aufzug, levels = c("nein", "ja"))
+apartment_rent$EBK <- factor(apartment_rent$EBK, levels = c("nein", "ja"))
+apartment_rent$Garten <- factor(apartment_rent$Garten, levels = c("nein", "ja"))
+apartment_rent$Barrierefr <- factor(apartment_rent$Barrierefr, levels = c("nein", "ja"))
+apartment_rent$Gaeste_WC <- factor(apartment_rent$Gaeste_WC, levels = c("nein", "ja"))
+apartment_rent$WBS_erford <- factor(apartment_rent$WBS_erford, levels = c("nein", "ja"))
+
+
+
+```
+
+
+```{r fixing NA and removing the outliers}
+# Filtering out outliers
+apartment_rent <- apartment_rent %>% filter(Zimmer < 23) # logically above the 23 is not realistic, and for perfect analyzing the relationship I remove it
+apartment_rent <- apartment_rent %>% filter(Wohnflaech > 0)# can not be 0 the living size
+apartment_rent <- apartment_rent %>% filter(Kaltmiete >= 100) # to set 100 for min is look like more realistic
+
+
+# Visualizing missing data (assuming the 'missmap' function is available)
+missmap(apartment_rent)
+
+## Fixing the NAs according to the median
+sum(is.na(apartment_rent$Etage)) #941
+
+# Separate complete and incomplete cases for 'Etage'
+complete_etage <- apartment_rent[!is.na(apartment_rent$Etage), ]
+incomplete_etage <- apartment_rent[is.na(apartment_rent$Etage), ]
+
+# Train a Decision Tree model using complete cases, we predict the NAs according to the relationship of rent prices, number of rooms and etc. it is more better than to set medians or means
+model_etage <- rpart(Etage ~ Kaltmiete + Zimmer + Wohnflaech, 
+                     data = complete_etage, method = "anova")
+
+# Predict the missing 'Etage' values in incomplete cases
+predicted_etage <- predict(model_etage, incomplete_etage)
+
+# Impute the predicted values back into the original dataframe
+apartment_rent$Etage[is.na(apartment_rent$Etage)] <- predicted_etage
+apartment_rent$Etage <- as.integer(apartment_rent$Etage)
+
+
+```
 
